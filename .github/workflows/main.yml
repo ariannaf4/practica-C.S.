@@ -1,0 +1,51 @@
+name: Build, Zip and Release Django Project
+
+on:
+  push:
+    tags:
+      - 'v*'   # Se ejecuta solo cuando hagas push de un tag tipo v1.0, v2.0, etc.
+
+permissions:
+  contents: write   # Necesario para crear releases
+  actions: write    # Para permitir que las acciones creen assets
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Clonar repositorio
+      uses: actions/checkout@v3
+
+    - name: Configurar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Comprimir proyecto en ZIP
+      run: |
+        zip -r django_project_build.zip . -x ".git"
+
+    - name: Crear Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ github.ref_name }}
+        body: |
+          🚀 Release automático generado desde GitHub Actions.
+          Contiene el proyecto Django comprimido en ZIP.
+        draft: false
+        prerelease: false
+
+    - name: Subir ZIP al Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./django_project_build.zip
+        asset_name: django_project_build.zip
+        asset_content_type: application/zip
